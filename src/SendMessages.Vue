@@ -9,86 +9,83 @@
         </b-jumbotron>
     </b-container>
     <b-container>
-        <b-card header="Messaging Service">
-            <p class="card-text">
-                Select the Azure messaging service you would like to use:
-            </p>
-            <b-btn v-b-toggle="selected+'Collapse'" @click="window.alert('ding')">test</b-btn>
-            <b-form-select id="messageService" v-model="selected" class="mb-3" size="sm" >
-                    <option value="eventgrid">Event Grid</option>
-                    <option value="eventhub">Event Hub</option>
-                    <option value="servicebus">Service Bus</option>
-                    <option value="storagequeue">Storage Queue</option>
-            </b-form-select>
-            <p>{{selected}}</p>
-            <p>{{selected+'Collapse'}}</p>
-        </b-card>
-        <b-collapse id="eventgridCollapse" accordion="settingsAccordion" class="mt-2">
+        <div class="container mt-2" id="MessageServiceSelection">
+            <b-card header="Messaging Service" class="mt-2">
+                <p class="card-text">
+                    Select the Azure messaging service you would like to use:
+                </p>
+                <select id="messageServiceChoice" @change="messageServiceChanged" class="mb-3" size="sm">
+                    <option selected></option>
+                    <option v-for="service in messageServicesList" :key="service.value" :value="service.value">{{service.text}}</option>
+                </select>
+            </b-card>
+        </div>
+        <div class="container mt-2" id="egMessageServiceSettings" hidden>
             <b-card id="egSettingsCard" header="Event Grid Settings">
                 <b-form inline>
                     <label class="mr-sm-2">Event Grid Endpoint:</label>
-                    <b-form-input id="egEndpoint"
+                    <b-form-input id="eventgridSettingsEndpoint"
                         name="egEndpoint"
-                        type="text"></b-form-input>
+                        type="text" @change="messageServiceSettingsChanged"></b-form-input>
                 </b-form>
                 <b-form inline>
                     <label class="mr-sm-2">Event Grid Key:</label>
-                    <b-form-input id="egKey"
+                    <b-form-input id="eventgridSettingsKey"
                         name="egKey"
-                        type="text"></b-form-input>
+                        type="text" @change="messageServiceSettingsChanged"></b-form-input>
                 </b-form>
             </b-card>
-        </b-collapse>
-        <b-collapse id="ehSettingsCollapse" accordion="settingsAccordion" class="mt-2">
+        </div>
+        <div class="container mt-2" id="ehMessageServiceSettings" hidden>
             <b-card id="ehSettings" header="Event Hub Settings">
                 <b-form inline>
                     <label class="mr-sm-2">Event Hub Connection String:</label>
-                    <b-form-input id="ehConnectionString"
+                    <b-form-input id="eventhubSettingConnectionString"
                         name="ehConnectionString"
-                        type="text"></b-form-input>
+                        type="text" @change="messageServiceSettingsChanged"></b-form-input>
                 </b-form>
                 <b-form inline>
                     <label class="mr-sm-2">Event Hub Name:</label>
-                    <b-form-input id="ehEventHub"
+                    <b-form-input id="eventhubSettingEventHub"
                         name="ehEventHub"
-                        type="text"></b-form-input>
+                        type="text" @change="messageServiceSettingsChanged"></b-form-input>
                 </b-form>
             </b-card>
-        </b-collapse>
-        <b-collapse id="sbSettingsCollapse" accordion="settingsAccordion" class="mt-2">
+        </div>
+        <div class="container mt-2" id="sbMessageServiceSettings" hidden>
             <b-card id="sbSettings" header="Service Bus Settings">
                 <b-form inline>
                     <label class="mr-sm-2">Service Bus Connection String:</label>
-                    <b-form-input id="sbConnectionString"
+                    <b-form-input id="servicebusConnectionString"
                         name="sbConnectionString"
-                        type="text"></b-form-input>
+                        type="text" @change="messageServiceSettingsChanged"></b-form-input>
                 </b-form>
                 <b-form inline>
                     <label class="mr-sm-2">Service Bus Queue:</label>
-                    <b-form-input id="sbQueue"
+                    <b-form-input id="servicebusQueue"
                         name="sbQueue"
-                        type="text"></b-form-input>
+                        type="text" @change="messageServiceSettingsChanged"></b-form-input>
                 </b-form>
             </b-card>
-        </b-collapse>
-        <b-collapse id="sqSettingsCollapse" accordion="settingsAccordion" class="mt-2">
+        </div>
+        <div class="container mt-2" id="sqMessageServiceSettings" hidden>
             <b-card id="sbSettings" header="Storage Queue Settings">
                 <b-form inline>
                     <label class="mr-sm-2">Storage Queue Connection String:</label>
-                    <b-form-input id="sqConnectionString"
+                    <b-form-input id="storagequeueConnectionString"
                         name="sqConnectionString"
-                        type="text"></b-form-input>
+                        type="text" @change="messageServiceSettingsChanged"></b-form-input>
                 </b-form>
                 <b-form inline>
                     <label class="mr-sm-2">Storage Queue Name:</label>
-                    <b-form-input id="sqName"
+                    <b-form-input id="storagequeueName"
                         name="sqName"
-                        type="text"></b-form-input>
+                        type="text" @change="messageServiceSettingsChanged"></b-form-input>
                 </b-form>
             </b-card>
-        </b-collapse>
-        <b-collapse id="GenerateMessages" visible>
-            <b-card id="MessageSendSettings" header="Generate Messages">
+        </div>
+        <div class="container mt-2" id="MessageSendSettings" hidden>
+            <b-card id="MessageSendSettingsCard" header="Generate Messages">
                 <div class="panel panel-default">
                     <div class="panel-heading">Now let's pick our scenario and send some messages:</div>
                     <div class="panel-body">
@@ -110,7 +107,7 @@
                     </div>
                 </div>
             </b-card>
-        </b-collapse>
+        </div>
     </b-container>
   </div>
 </template>
@@ -124,8 +121,13 @@ export default {
         messageScenario: "simple",
         messageDuration: 1,
         messageFrequency: 1,
-        selected: null,
         egSettingsCollapse: true,
+        messageServicesList: [
+            {text: "Event Grid", value: "eventgrid"},
+            {text: "Event Hub", value: "eventhub"},
+            {text: "Service Bus", value: "servicebus"},
+            {text: "Storage Queue", value: "storagequeue"}
+        ],
         messageScenarioList: [
             {text: "Simple", value:"simple", description: "Simple enumerated messages", checked: true},
             {text:"Ninja Battle", value:"ninjaattack", description: "Epic battle between good and bad ninjas played out through sensors on the battlefield"}
@@ -147,13 +149,38 @@ export default {
     }
   },
   methods: {
-      messageServiceChanged: function() {
-          switch (messageService.value) {
-              case "eventgrid":
-                v-b-toggle.eventgridCollapse
-                //egSettingsCollapse.visible
-          }
-      }
+      messageServiceChanged: function(test) {
+        this.messageService = messageServiceChoice.value
+        Array.prototype.slice.call(document.querySelectorAll('div[id$="MessageServiceSettings"]')).forEach( function(el) {
+            el.hidden = true;
+        });
+        switch (this.messageService) {
+            case "eventgrid":
+                document.getElementById('egMessageServiceSettings').hidden = false;
+                break;
+            case "eventhub":
+                document.getElementById('ehMessageServiceSettings').hidden = false;
+                break;
+            case "servicebus":
+                document.getElementById('sbMessageServiceSettings').hidden = false;
+                break;
+            case "storagequeue":
+                document.getElementById('sqMessageServiceSettings').hidden = false;
+                break;    
+        }
+      },
+      messageServiceSettingsChanged: function() {
+        var selector = this.messageService + 'Settings'
+        var hasBlanks = [];
+        Array.prototype.slice.call(document.querySelectorAll('*[id^='+selector+']')).forEach(function(el) {el.value == '' ? hasBlanks.push(true): hasBlanks.push(false);});
+        if (hasBlanks.indexOf(true) == -1) {
+            console.log("no more blanks");
+            document.getElementById('MessageSendSettings').hidden = false;
+        } else {
+            console.log("blanks still");
+            document.getElementById('MessageSendSettings').hidden = true;
+        }
+    }
   }
 }
 </script>
