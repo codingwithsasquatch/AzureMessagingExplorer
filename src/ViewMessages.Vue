@@ -1,6 +1,17 @@
 <template>
   <div>
-    <b-container>
+    <b-container fluid>
+        <b-jumbotron fluid>
+            <h1 class="lead text-centered">Azure Event Viewer</h1>
+            <h3 class="lead centered text-muted">A simple tool for generating sample events in Azure messaging services</h3>
+            <p class="centered">some sort of info printed here</p>
+            <div class="row centered">
+                <b-button variant="primary" v-on:click="start">Start</b-button>
+                <b-button variant="danger" v-on:click="stop">Stop</b-button>
+            </div>
+        </b-jumbotron>
+    </b-container>
+    <!-- <b-container>
       <b-jumbotron header="Azure Event Viewer" leader="">
           <p>some sort of info printed here</p>
           <b-form-group
@@ -9,7 +20,7 @@
               label="Enter your connection string"
               label-for="connectionstring"
           >
-              <b-form-input id="connectionstring" v-model="connectionstring"></b-form-input>
+            <b-form-input id="connectionstring" v-model="connectionstring"></b-form-input>
           </b-form-group>
           <b-form-group
               id="fieldset2"
@@ -17,87 +28,67 @@
               label="Enter your queue name"
               label-for="queue"
           >
-          <b-form-input id="queue" v-model="queue"></b-form-input>
-      </b-form-group>
+            <b-form-input id="queue" v-model="queue"></b-form-input>
+          </b-form-group>
           <b-button variant="primary" v-on:click="start">Start</b-button>
           <b-button variant="danger" v-on:click="stop">Stop</b-button>
       </b-jumbotron>
-    </b-container>
+    </b-container> -->
     <b-container>
-        <b-card-group>
-            <event-item 
-                v-for="item in eventList"
-                v-bind:event="item"
-                v-bind:key="item.id">
-            </event-item>
-        </b-card-group>
+        <div class="container mt-2">
+            <ol>
+                <event-item
+                    v-for="item in eventList"
+                    v-bind:event="item"
+                    v-bind:key="item.id">
+                </event-item>
+            </ol>
+        </div>
     </b-container>
   </div>
 </template>
-"/static/js/azure-storage.queue.min.js"
 <script>
-const Queue = require('./azure-storage.queue.min.js')
-
 import EventItem from './EventItem.vue'
 
 export default {
-  data() {
+  components: {
+    EventItem
+  },
+  data: function() {
     return {
-        connectionstring: 'connectionstring',
+        connection: null,
+        connectionstring: null,
+        connectionInfo: null,
+        lastMessage: null,
+        messageCount: 0,
         queue: 'queue',
         eventList: [ ],
     }
   },
   methods: {
-      start: function() {startEventListener();},
-      stop: function() {stopEventListener();}
-  }
-}
+    getSignalRConnectionInfo: function() {
+      let xhttp = new XMLHttpRequest()
+      xhttp.open("GET", "https://signalrbroker.azurewebsites.net/api/negotiate", false)
+      xhttp.setRequestHeader("Content-type", "application/json")
+      xhttp.send()
+      return JSON.parse(xhttp.response)
+    },
+    start: function() {
+        this.connectionInfo = this.getSignalRConnectionInfo();
+        this.connection = new this.$signalR.HubConnectionBuilder()
+            .withUrl(this.connectionInfo.endpoint, {accessTokenFactory: () => this.connectionInfo.accessKey})
+            .configureLogging(this.$signalR.LogLevel.Information)
+            .build();
+        this.connection.start();
+        this.connection.on('notify', data => {
+            this.messageCount++
+            this.lastMessage = new Date().toLocaleString();
+            this.eventList.unshift({ id: this.messageCount.toString(), time: this.lastMessage, data: data});
 
-
-var currentBackoff = 0;
-var maximumBackoff = 10;
-var stopListening = false;
-var queueService;
-var encoder = new Queue.QueueMessageEncoder.TextBase64QueueMessageEncoder();
-var timer;
-
-function startEventListener() {
-    queueService = Queue.createQueueService(app.connectionstring);
-    getEvents();
-}
-
-function stopEventListener() {
-    stopListening = true;
-}
-
-function getEvents() {
-    if (stopListening != true) {
-        queueService.getMessages(app.queue, {numOfMessages:32},function(error, messages, response) {
-            if(!error){
-                if (messages.length>0) {
-                    // Reset backoff
-                    currentBackoff = 0;
-
-                    for (message in messages) {
-                        app.eventList.push(JSON.parse(messages[message].messageText));
-                        queueService.deleteMessage(app.queue, messages[message].messageId, messages[message].popReceipt, function(error, response) {
-                            if (!error) {
-                                //message deleted
-                            }
-                        });
-                    }
-                } else {
-                    if (currentBackoff < maximumBackoff)
-                    {
-                        currentBackoff++;
-                    }
-                }
-                timer = setTimeout(getEvents,currentBackoff*1000);
-            }
         });
-        stopListening = false;
-    }
+    },
+    stop: function() { this.connection.stop() }
+  }
 }
 </script>
 

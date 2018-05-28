@@ -9,6 +9,7 @@
     "build": "cross-env NODE_ENV=production webpack --progress --hide-modules"
   },
   "dependencies": {
+    "@aspnet/signalr": "^1.0.0-rc1-update1",
     "axios": "^0.18.0",
     "azure-storage": "^2.8.2",
     "bootstrap": "^4.0.0-beta.2",

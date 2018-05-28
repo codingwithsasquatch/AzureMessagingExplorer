@@ -90,7 +90,7 @@
                     <div class="panel-heading">Now let's pick our scenario and send some messages:</div>
                     <div class="panel-body">
                         <li v-for="scen in messageScenarioList" :key="scen.value">
-                            <input type="radio" name="messageScenarioSelect" :key="scen.value" :value="scen.value" :checked="scen.checked">{{scen.text}}
+                            <input type="radio" name="messageScenarioSelect" v-model="messageScenario" :key="scen.value" :value="scen.value" :checked="scen.checked">{{scen.text}}
                         </li>
                         <br>
                         <p id="messageScenarioDescription">{{messageScenarioList[1].description}}</p>
@@ -102,8 +102,8 @@
                         <select id="messageFrequencyList" v-model="messageFrequency">
                             <option v-for="freq in messageFrequencyList" :key="freq.value" :value="freq.value">{{freq.text}}</option>
                         </select><br>
-                        <input class="btn btn-primary" id="startButton" type="button" value="Start" />
-                        <input class="btn btn-primary" id="stopButton" type="button" value="Stop" disabled/>
+                        <input class="btn btn-primary" id="startButton" type="button" value="Start" @click="start" />
+                        <input class="btn btn-primary" id="stopButton" type="button" value="Stop" @click="stop" disabled/>
                     </div>
                 </div>
             </b-card>
@@ -117,7 +117,7 @@
 export default {
   data() {
     return {
-        messageService: null,
+        messageMethod: null,
         messageScenario: "simple",
         messageDuration: 1,
         messageFrequency: 1,
@@ -149,12 +149,12 @@ export default {
     }
   },
   methods: {
-      messageServiceChanged: function(test) {
-        this.messageService = messageServiceChoice.value
+    messageServiceChanged: function () {
+        this.messageMethod = messageServiceChoice.value
         Array.prototype.slice.call(document.querySelectorAll('div[id$="MessageServiceSettings"]')).forEach( function(el) {
             el.hidden = true;
         });
-        switch (this.messageService) {
+        switch (this.messageMethod) {
             case "eventgrid":
                 document.getElementById('egMessageServiceSettings').hidden = false;
                 break;
@@ -168,8 +168,8 @@ export default {
                 document.getElementById('sqMessageServiceSettings').hidden = false;
                 break;    
         }
-      },
-      messageServiceSettingsChanged: function() {
+    },
+    messageServiceSettingsChanged: function () {
         var selector = this.messageService + 'Settings'
         var hasBlanks = [];
         Array.prototype.slice.call(document.querySelectorAll('*[id^='+selector+']')).forEach(function(el) {el.value == '' ? hasBlanks.push(true): hasBlanks.push(false);});
@@ -180,6 +180,63 @@ export default {
             console.log("blanks still");
             document.getElementById('MessageSendSettings').hidden = true;
         }
+    },
+    start: function () {
+
+        var jobRequest = {
+            "messageMethod": this.messageMethod,
+            "duration": this.messageDuration,
+            "frequency": this.messageFrequency,
+            "messageScheme": this.messageScenario
+        }
+
+        switch (messageMethod) {
+            case "eventgrid":
+                jobRequest.endpoint = document.getElementById('eventgridSettingEndpoint').value;
+                jobRequest.key = document.getElementById('eventgridSettingKey').value;
+                break;
+            case "eventhub":
+                jobRequest.connectionString = document.getElementById('eventhubSettingConnectionString').value;
+                jobRequest.eventhub = document.getElementById('eventhubSettingEventHub').value;
+                break;
+            case "servicebus":
+                jobRequest.connectionString = document.getElementById('servicebusSettingsConnectionString').value;
+                jobRequest.queue = document.getElementById('servicebusSettingsQueue').value;
+                break;
+            case "storagequeue":
+                jobRequest.connectionString = document.getElementById('storagequeueSettingsConnectionString').value;
+                jobRequest.queue = document.getElementById('storagequeueSettingsQueue').value;
+                break;    
+        }
+
+        console.log(jobRequest);
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function () {
+            if (xhttp.readyState == XMLHttpRequest.DONE) {
+                jobId = xhttp.responseText;
+                console.log(xhttp.responseText);
+                document.getElementById('stopButton').disabled = false;
+                document.getElementById('startButton').disabled = true;
+                setTimeout(function () {
+                    document.getElementById('startButton').disabled = false;
+                    document.getElementById('stopButton').disabled = true;
+                }, 60 * 1000 * messageDuration)
+            }
+        }
+        
+        xhttp.open("POST", "/job", true);
+        xhttp.setRequestHeader("Content-type", "application/json");
+        xhttp.send(JSON.stringify(jobRequest));
+    },
+    stop: function () {
+        var xhttp = new XMLHttpRequest();
+        xhttp.open("DELETE", "/job/"+jobId, true);
+        xhttp.setRequestHeader("Content-type", "application/json");
+        xhttp.send();
+        console.log(xhttp.responseText)
+
+        document.getElementById('startButton').disabled = false;
+        document.getElementById('stopButton').disabled = true;
     }
   }
 }

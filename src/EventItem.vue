@@ -1,8 +1,8 @@
 <template>
-    <b-card no-body >
-        <h4 v-b-toggle="event.id" class="card-title">{{event.id}}</h4>
+    <b-card no-body class="mt-2">
+        <h4 v-b-toggle="event.id" class="card-title">#{{event.id}} - {{event.time}}</h4>
         <b-collapse :id="event.id">
-            <pre><code class="hljs json">{{ event }}</code></pre>
+            <pre class="prettyprint lang-js"><code>{{ event.data }}</code></pre>
         </b-collapse>
     </b-card>
 </template>
