@@ -21,8 +21,15 @@
                 "description": "Storage Account type"
             }
         },
-        "sourceCodeRepositoryURL": {
-            "defaultValue": "https://github.com/codingwithsasquatch/AzureMessagingExplorer.git",
+        "uiSourceCodeRepositoryURL": {
+            "defaultValue": "https://github.com/codingwithsasquatch/AzureMessagingExplorerUI.git",
+            "type": "string",
+            "metadata": {
+                "description": "this is the github repo that will be used to for the function's code"
+            }
+        },
+        "workerSourceCodeRepositoryURL": {
+            "defaultValue": "https://github.com/codingwithsasquatch/AzureMessagingExplorerWorker.git",
             "type": "string",
             "metadata": {
                 "description": "this is the github repo that will be used to for the function's code"
@@ -46,6 +53,7 @@
     },
     "variables": {
         "functionAppName": "[parameters('serviceName')]",
+        "functionAppWorkerName": "[concat(parameters('serviceName'), 'Worker')]",
         "appServicePlanName": "[parameters('serviceName')]",
         "hostingPlanName": "[parameters('serviceName')]",
         "storageAccountName": "[concat(parameters('serviceName'), 'storage')]",
@@ -83,6 +91,49 @@
             "name": "[variables('functionAppName')]",
             "apiVersion": "[providers('Microsoft.Web', 'sites').apiVersions[0]]",
             "location": "[resourceGroup().location]",
+            "properties": {
+                "serverFarmId": "[variables('appServicePlanName')]",
+                "siteConfig": {
+                    "appSettings": [{
+                            "name": "FUNCTIONS_EXTENSION_VERSION",
+                            "value": "beta"
+                        },
+                        {
+                            "name": "AzureWebJobsDashboard",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value)]"
+                        },
+                        {
+                            "name": "AzureWebJobsStorage",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value)]"
+                        }
+                    ]
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+                "[resourceId('Microsoft.Web/serverfarms', parameters('serviceName'))]"
+            ],
+            "resources": [{
+                    "type": "sourcecontrols",
+                    "name": "web",
+                    "apiVersion": "2015-08-01",
+                    "properties": {
+                        "RepoUrl": "[parameters('uiSourceCodeRepositoryURL')]",
+                        "branch": "[parameters('sourceCodeBranch')]",
+                        "IsManualIntegration": "[parameters('sourceCodeManualIntegration')]"
+                    },
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/sites/', variables('functionAppName'))]"
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "kind": "functionapp",
+            "name": "[variables('functionAppWorkerName')]",
+            "apiVersion": "[providers('Microsoft.Web', 'sites').apiVersions[0]]",
+            "location": "[resourceGroup().location]",
             "identity": {
                 "type": "SystemAssigned"
             },
@@ -112,6 +163,20 @@
                 "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
                 "[resourceId('Microsoft.Web/serverfarms', parameters('serviceName'))]",
                 "[resourceId('Microsoft.SignalRService/SignalR', variables('signalrName'))]"
+            ],
+            "resources": [{
+                    "type": "sourcecontrols",
+                    "name": "web",
+                    "apiVersion": "2015-08-01",
+                    "properties": {
+                        "RepoUrl": "[parameters('workerSourceCodeRepositoryURL')]",
+                        "branch": "[parameters('sourceCodeBranch')]",
+                        "IsManualIntegration": "[parameters('sourceCodeManualIntegration')]"
+                    },
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/sites/', variables('functionAppName'))]"
+                    ]
+                }
             ]
         },
         {
@@ -123,7 +188,7 @@
                 "capacity": 1
             },
             "name": "[variables('signalrName')]",
-            "apiVersion": "2018-03-01-preview",
+            "apiVersion": "[providers('Microsoft.SignalRService', 'SignalR').apiVersions[0]]",
             "location": "eastus"
         }
     ]

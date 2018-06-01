@@ -8,7 +8,7 @@ namespace AzureMessagingExplorer
     {
         [FunctionName("StorageQueueTrigger")]
         [Disable("StorageQueueTrigger_Disabled")]
-        public static void Run([QueueTrigger("queuename", Connection = "AzureWebJobsStorage")]string myQueueItem, TraceWriter log)
+        public static void Run([QueueTrigger("queuename", Connection = "EventHubConnectionAppSetting")]string myQueueItem, TraceWriter log)
         {
             log.Info($"C# Queue trigger function processed: {myQueueItem}");
         }
